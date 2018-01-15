@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.stats import multivariate_normal
-from pykalman import KalmanFilter
 from pykalman import UnscentedKalmanFilter
 
 class EM_container:
@@ -19,23 +18,27 @@ class EM_container:
         self.v_cov = [] # Covariance matrix for v noise
         self.w_cov = [] # Covariance matrix for w noise
 
+        self.hidden_sequence = []
+        self.output_sequence = []
 
     def E_step(self):
+        ukf = AdditiveUnscentedKalmanFilter(f, g, transition_covariance=self.w_cov, observation_covariance=self.v_cov)
+        self.hidden_sequence = ukf.smooth(self.output_sequence)
         
 
-    def M_step(self, hidden_sequence, output_sequence):
+    def M_step(self):
         # We assume absence of external inputs
-        J = hidden_sequence.shape[0]
-        n_hidden = hidden_sequence.shape[1]
+        J = self.hidden_sequence.shape[0]
+        n_hidden = self.hidden_sequence.shape[1]
         n_rbfs = len(self.basis_functions)
 
         # First, maximize the update parameters
         f_estimator = lambda x: np.sum(np.dot(self.f_coords.T, self.rho(x))) \
                                 + np.dot(self.linear_f, x) + self.bias_f
-        z_f = np.array([f_estimator(state) for state in hidden_sequence])
+        z_f = np.array([f_estimator(state) for state in self.hidden_sequence])
         print(z_f.shape)
         phi_f_T = np.array([np.concatenate(([rho(state) for rho in self.basis_functions],
-                                            state, [1.])) for state in hidden_sequence])
+                                            state, [1.])) for state in self.hidden_sequence])
         print(phi_f_T.shape)
 
         tmp = np.sum([np.dot(np.reshape(z_f[j, :], (n_hidden, 1)), np.reshape(phi_f_T[j, :], (1, n_rbfs +
@@ -55,14 +58,14 @@ class EM_container:
         self.w_cov = Q_f
 
         # Then, maximize the ouput parameters
-        n_outputs = output_sequence.shape[1]
+        n_outputs = self.output_sequence.shape[1]
 
         # First, maximize the update parameters
         g_estimator = lambda x: np.sum(np.dot(self.g_coords.T, self.rho(x))) + np.dot(self.linear_g, x) + self.bias_g
-        z_g = np.array([g_estimator(state) for state in hidden_sequence])
+        z_g = np.array([g_estimator(state) for state in self.hidden_sequence])
         print(z_g.shape)
         phi_g_T = np.array([np.concatenate(([rho(state) for rho in self.basis_functions],
-                                            state, [1.])) for state in hidden_sequence])
+                                            state, [1.])) for state in self.hidden_sequence])
         print(phi_g_T.shape)
 
         tmp = np.sum([np.dot(np.reshape(z_g[j, :], (n_outputs, 1)), np.reshape(phi_g_T[j, :], (1, n_rbfs +
@@ -81,8 +84,8 @@ class EM_container:
         self.bias_g = theta_f[:, n_outputs + n_rbfs]
         self.w_cov = Q_f
 
-        self.g_estimator = lambda x,w: np.sum(np.dot(self.g_coords.T, self.rho(x))) + np.dot(self.linear_g, x) + self.bias_g + w
-        self.f_estimator = lambda x,w: np.sum(np.dot(self.f_coords.T, self.rho(x))) + np.dot(self.linear_f, x) + self.bias_f + w
+        self.g_estimator = lambda x: np.sum(np.dot(self.g_coords.T, self.rho(x))) + np.dot(self.linear_g, x) + self.bias_g
+        self.f_estimator = lambda x: np.sum(np.dot(self.f_coords.T, self.rho(x))) + np.dot(self.linear_f, x) + self.bias_f
         
         #return f_estimator, g_estimator, self.w_cov, self.v_cov
 
