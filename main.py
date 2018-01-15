@@ -12,18 +12,15 @@ import sklearn
 from sklearn import decomposition
 from initialization_methods import factor_analysis, lds
 
-examptle_2 = dynamical_system(n_hidden=1, n_inputs=0, n_outputs=3, flow_function=sin_flow, driving_function=no_drive(1),
+examptle_2 = dynamical_system(n_hidden=2, n_inputs=0, n_outputs=3, flow_function=sin_flow, driving_function=no_drive(1),
                              output_function=dummy_obs)
 
 observed, traj_hidden = example_1.generate_trajectory()
 
-#print("True trajectory".format(traj_hidden))
+print("True trajectory".format(traj_hidden))
 
 n_comp= 2
-components, scores, noise_variance, latent = factor_analysis(observed,n_comp)
+components, scores, noise = factor_analysis(observed,n_comp)
 
-loading_matrix= np.transpose(components)
-print("error{}".format(traj_hidden-latent))
-
-A, C, Q, R, x0 = lds(observed,latent,loading_matrix,noise)
+hidden_estimate = observed.dot(np.transpose(components))
 #print(components)

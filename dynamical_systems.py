@@ -1,7 +1,7 @@
 """
 Define a class representing a dynamical system.
 
-Authors : Arnaud Fanthomme, Thomas Bazeille, Tristan Stérin
+Authors : Arnaud Fanthomme, Thomas Bazeille, Tristan Sterin
 """
 
 import numpy as np
