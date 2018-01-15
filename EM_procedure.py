@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.stats import multivariate_normal
 from pykalman import KalmanFilter
+from pykalman import UnscentedKalmanFilter
 
 class EM_container:
     def __init__(self, rbf_centers, rbf_covs):
@@ -20,7 +21,7 @@ class EM_container:
 
 
     def E_step(self):
-        self.f_esti
+        
 
     def M_step(self, hidden_sequence, output_sequence):
         # We assume absence of external inputs
@@ -80,8 +81,8 @@ class EM_container:
         self.bias_g = theta_f[:, n_outputs + n_rbfs]
         self.w_cov = Q_f
 
-        self.g_estimator = lambda x: np.sum(np.dot(self.g_coords.T, self.rho(x))) + np.dot(self.linear_g, x) + self.bias_g
-        self.f_estimator = lambda x: np.sum(np.dot(self.f_coords.T, self.rho(x))) + np.dot(self.linear_f, x) + self.bias_f
+        self.g_estimator = lambda x,w: np.sum(np.dot(self.g_coords.T, self.rho(x))) + np.dot(self.linear_g, x) + self.bias_g + w
+        self.f_estimator = lambda x,w: np.sum(np.dot(self.f_coords.T, self.rho(x))) + np.dot(self.linear_f, x) + self.bias_f + w
         
         #return f_estimator, g_estimator, self.w_cov, self.v_cov
 
