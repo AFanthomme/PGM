@@ -3,20 +3,23 @@ from scipy.stats import multivariate_normal
 from pykalman import UnscentedKalmanFilter
 
 class EM_container:
-    def __init__(self, rbf_centers, rbf_covs):
+    def __init__(self, rbf_centers, rbf_covs, A, b, C, d):
+        self.n_rbfs = rbf_centers.shape[0]
+        self.n_hidden = A.shape[0]
+        self.n_outputs = C.shape[0]
         self.basis_functions = [lambda x: multivariate_normal.pdf(x, mean=rbf_centers[i, :], cov= rbf_covs[i, :,:]) for i
                                 in range(len(rbf_centers))]
         self.rho = lambda x: np.array([rho(x) for rho in self.basis_functions])
-        self.f_coords = np.zeros(()) # List of coefs for representing f (n_rbfs x n_hidden)
-        self.linear_f = []  # Matrix of the linear part of f (n_hidden x n_hidden)
-        self.bias_f = [] # Bias for the linear part of f (n_hidden)
+        self.f_coords = np.zeros((self.n_rbfs, self.n_hidden)) # List of coefs for representing f (n_rbfs x n_hidden)
+        self.linear_f = A  # Matrix of the linear part of f (n_hidden x n_hidden)
+        self.bias_f = b # Bias for the linear part of f (n_hidden)
 
-        self.g_coords = [] # List of coefs for representing g (n_rbfs x n_outputs)
-        self.linear_g = []  # Matrix of the linear part of g (n_outputs x n_hidden)
-        self.bias_g = 0. # Bias for the linear part of g
+        self.g_coords = np.zeros((self.n_rbfs, self.n_outputs)) # List of coefs for representing g (n_rbfs x n_outputs)
+        self.linear_g = C  # Matrix of the linear part of g (n_outputs x n_hidden)
+        self.bias_g = d # Bias for the linear part of g
 
-        self.v_cov = [] # Covariance matrix for v noise
-        self.w_cov = [] # Covariance matrix for w noise
+        self.v_cov = np.zeros((self.n_rbfs, self.n_outputs)) # Covariance matrix for v noise
+        self.w_cov = np.zeros((self.n_rbfs, self.n_outputs)) # Covariance matrix for w noise
 
         self.hidden_sequence = []
         self.output_sequence = []
