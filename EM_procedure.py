@@ -1,10 +1,12 @@
 import numpy as np
-
+from scipy.stats import multivariate_normal
 
 class EM_container:
-    def __init__(self):
-        self.basis_functions = [] # List of functions x->rho_i(x)
-        self.f_coords = [] # List of coefs for representing f (n_rbfs x n_hidden)
+    def __init__(self, rbf_centers, rbf_covs):
+        self.basis_functions = [lambda x: multivariate_normal.pdf(x, mean=rbf_centers[i, :], cov= rbf_covs[i, :,:]) for i
+                                in range(len(rbf_centers))]
+        self.rho = lambda x: np.array([rho(x) for rho in self.basis_functions])
+        self.f_coords = np.zeros(()) # List of coefs for representing f (n_rbfs x n_hidden)
         self.linear_f = []  # Matrix of the linear part of f (n_hidden x n_hidden)
         self.bias_f = [] # Bias for the linear part of f (n_hidden)
 
@@ -15,6 +17,7 @@ class EM_container:
         self.v_cov = [] # Covariance matrix for v noise
         self.w_cov = [] # Covariance matrix for w noise
 
+
     def M_step(self, hidden_sequence, output_sequence):
         # We assume absence of external inputs
         J = hidden_sequence.shape[0]
@@ -22,7 +25,7 @@ class EM_container:
         n_rbfs = len(self.basis_functions)
 
         # First, maximize the update parameters
-        f_estimator = lambda x: np.sum(np.dot(self.f_coords.T, [rho(x) for rho in self.basis_functions])) \
+        f_estimator = lambda x: np.sum(np.dot(self.f_coords.T, self.rho(x))) \
                                 + np.dot(self.linear_f, x) + self.bias_f
         z_f = np.array([f_estimator(state) for state in hidden_sequence])
         print(z_f.shape)
@@ -50,8 +53,7 @@ class EM_container:
         n_outputs = output_sequence.shape[1]
 
         # First, maximize the update parameters
-        g_estimator = lambda x: np.sum(np.dot(self.g_coords.T, [rho(x) for rho in self.basis_functions])) + \
-                                np.dot(self.linear_g, x) + self.bias_g
+        g_estimator = lambda x: np.sum(np.dot(self.g_coords.T, self.rho(x))) + np.dot(self.linear_g, x) + self.bias_g
         z_g = np.array([g_estimator(state) for state in hidden_sequence])
         print(z_g.shape)
         phi_g_T = np.array([np.concatenate(([rho(state) for rho in self.basis_functions],
@@ -73,3 +75,9 @@ class EM_container:
         self.linear_g = theta_f[:, n_rbfs:n_rbfs+n_outputs]
         self.bias_g = theta_f[:, n_outputs + n_rbfs]
         self.w_cov = Q_f
+
+        g_estimator = lambda x: np.sum(np.dot(self.g_coords.T, self.rho(x))) + np.dot(self.linear_g, x) + self.bias_g
+        f_estimator = lambda x: np.sum(np.dot(self.f_coords.T, self.rho(x))) + np.dot(self.linear_f, x) + self.bias_f
+        return f_estimator, g_estimator, self.w_cov, self.v_cov
+
+
